@@ -18,6 +18,7 @@ import java.nio.file.Files;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -156,6 +157,7 @@ public class MohawkWebserverCore {
 		HttpRequest request = HttpRequest.newBuilder().uri(uri)
 				.setHeader("content-type", contentType)
 				.POST(BodyPublishers.ofByteArray(Files.readAllBytes(file.toPath())))
+				.timeout(Duration.ofMinutes(10))
 				.build();
 		
 		return request;
@@ -406,11 +408,18 @@ public class MohawkWebserverCore {
 			//catch exception with some logs
 		}
 		if (response.statusCode() != 200) {
+			printResponse(response);
 			throw new Exception(getErrorMessage(response));
 		}
 		return stringResponseToString(response);
 	}
 	
+	private void printResponse(HttpResponse<String> response) {
+		System.out.println("Received response: ");
+		System.out.println("request and status: " + response.toString());
+		System.out.println("body: " + response.body());
+	}
+
 	//to do: make this work
 	public String loadXMLWorklist(File worklist) throws Exception {
 		HttpResponse<String> response = null;

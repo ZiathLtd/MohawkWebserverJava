@@ -1,6 +1,9 @@
 package MohawkWebserverJava.MohawkWebserverJava;
 
 import java.io.File;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.net.http.HttpClient.Version;
 import java.nio.file.Files;
@@ -20,13 +23,18 @@ public class MohawkWebserverTest
 {
 	private final static String HOST = "localhost";
 	private final static int PORT = 8556;
+	private final static String NOTIFICATION_URL = "ws://localhost:8025/mohawk/notifications";
+	public static NotificationWebsocketClient notificationClient;
 	
-    public static void main( String[] args )
-    {
+    public static void main( String[] args ) throws URISyntaxException, InterruptedException {
         MohawkWebserverCore mohawk = new MohawkWebserverCore(HOST, PORT);
         mohawk.setHttpClient(HttpClient.newBuilder().version(Version.HTTP_2) // this is the default
 				.build());
         
+        
+        //Start the notification client
+        startNotificationClient();
+//        startNotificationClientAndKeepAlive();
         
         //Get version
         String version = mohawk.getVersion();
@@ -192,7 +200,7 @@ public class MohawkWebserverTest
 		}
 		
 		
-		//Force shudown
+		//Force shutdown
 		mohawk.forceShutdown();
 		System.out.println("Forced shutdown!");
 		
@@ -206,5 +214,45 @@ public class MohawkWebserverTest
 //			e.printStackTrace();
 //			System.out.println("Load excel worklist result: " + e.getMessage());
 //		}
+		
+		
+		//call close session to close the notification client, either at the end of the operations or after some time
+		Thread.sleep(3000);
+		notificationClient.closeSession();
+    }
+    
+    /**
+     * Use this to start the notification client on the main thread 
+     * and have it close after all operations are done
+     */
+    public static void startNotificationClient() {
+    	notificationClient = new NotificationWebsocketClient(NOTIFICATION_URL);
+    }
+    
+    /**
+     * Use this to start the notification client on a new thread
+     * and keep it running until the program is terminated
+     * @throws InterruptedException 
+     */
+    public static void startNotificationClientAndKeepAlive() throws InterruptedException {
+    	new Thread(new Runnable() {
+			
+			@Override
+			public void run() {
+				try {
+			        notificationClient = new NotificationWebsocketClient(NOTIFICATION_URL);
+			        
+			        Runtime.getRuntime().addShutdownHook(new Thread(notificationClient::closeSession));
+			        
+			        // Need this to keep the session running
+					Thread.currentThread().join();
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			}
+		}).start();
+    	
+    	//wait for the notification server to start
+    	Thread.sleep(500);
     }
 }
