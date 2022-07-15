@@ -60,10 +60,12 @@ public class NotificationWebsocketClient {
 	}
 
 	public void closeSession() {
-    	try {
-			this.session.close();
-		} catch (IOException e) {
-			e.printStackTrace();
+		if (this.session != null) {
+	    	try {
+				this.session.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
     }
 }
