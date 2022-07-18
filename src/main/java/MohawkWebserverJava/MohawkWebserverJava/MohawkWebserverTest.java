@@ -1,12 +1,7 @@
 package MohawkWebserverJava.MohawkWebserverJava;
 
 import java.io.File;
-import java.io.IOException;
-import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.http.HttpClient;
-import java.net.http.HttpClient.Version;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -28,37 +23,59 @@ public class MohawkWebserverTest
 	
     public static void main( String[] args ) throws URISyntaxException, InterruptedException {
         MohawkWebserverCore mohawk = new MohawkWebserverCore(HOST, PORT);
-        mohawk.setHttpClient(HttpClient.newBuilder().version(Version.HTTP_2) // this is the default
-				.build());
-        
         
         //Start the notification client
         startNotificationClient();
 //        startNotificationClientAndKeepAlive();
         
         //Get version
-        String version = mohawk.getVersion();
-        System.out.println("Version: " + version);
+        String version;
+		try {
+			version = mohawk.getVersion();
+	        System.out.println("Version: " + version);
+		} catch (Exception e) {
+	        System.out.println("Version: " + e.getMessage());
+		}
         
         
         //Get lid status
-        String lidStatus = mohawk.getLidStatus();
-        System.out.println("Lid status: " + lidStatus);
+        String lidStatus;
+		try {
+			lidStatus = mohawk.getLidStatus();
+	        System.out.println("Lid status: " + lidStatus);
+		} catch (Exception e) {
+	        System.out.println("Lid status: " + e.getMessage());
+		}
         
         
         //Get mohawk status
-        String mohawkStatus = mohawk.getMohawkStatus();
-        System.out.println("Mohawk status: " + mohawkStatus);
+        String mohawkStatus;
+		try {
+			mohawkStatus = mohawk.getMohawkStatus();
+	        System.out.println("Mohawk status: " + mohawkStatus);
+		} catch (Exception e) {
+	        System.out.println("Mohawk status: " + e.getMessage());
+		}
         
         
         //Get temperature
-        int temperature = mohawk.getTemperature();
-        System.out.println("Temperature: " + temperature);
+        int temperature;
+		try {
+			temperature = mohawk.getTemperature();
+	        System.out.println("Temperature: " + temperature);
+		} catch (Exception e) {
+	        System.out.println("Temperature: " + e.getMessage());
+		}
         
         
         //Get fan speed
-        int fanSpeed = mohawk.getFanSpeed();
-        System.out.println("Fan speed: " + fanSpeed);
+        int fanSpeed;
+		try {
+			fanSpeed = mohawk.getFanSpeed();
+	        System.out.println("Fan speed: " + fanSpeed);
+		} catch (Exception e) {
+	        System.out.println("Fan speed: " + e.getMessage());
+		}
         
         
         //Get pins status
@@ -72,8 +89,13 @@ public class MohawkWebserverTest
         
         
         //Reset pins
-        String resetPinsResult = mohawk.resetPins();
-        System.out.println("Reset pins result: " + resetPinsResult);
+        String resetPinsResult;
+		try {
+			resetPinsResult = mohawk.resetPins();
+	        System.out.println("Reset pins result: " + resetPinsResult);
+		} catch (Exception e) {
+	        System.out.println("Reset pins result: " + e.getMessage());
+		}
         
         
         //Pins up
@@ -90,13 +112,23 @@ public class MohawkWebserverTest
 		
 		
 		//Configure reader
-		JsonObject reader = mohawk.configureReader("ZIATH");
-		System.out.println("Configure reader result: " + reader);
+		JsonObject reader;
+		try {
+			reader = mohawk.configureReader("ZIATH");
+			System.out.println("Configure reader result: " + reader);
+		} catch (Exception e) {
+			System.out.println("Configure reader result: " + e.getMessage());
+		}
 		
 
 		//Read rack barcode
-		String barcode = mohawk.readBarcode();
-		System.out.println("Rack barode: " + barcode);
+		String barcode;
+		try {
+			barcode = mohawk.readBarcode();
+			System.out.println("Rack barode: " + barcode);
+		} catch (Exception e) {
+			System.out.println("Rack barode: " + e.getMessage());
+		}
 		
 
         //Load json worklist
@@ -191,6 +223,54 @@ public class MohawkWebserverTest
 		}
 		
 		
+		//Load excel file
+		try {
+			File excelWorklist = new File("C:\\Users\\AndreeaStefanescu\\Desktop\\picklist.xlsx");
+			String loadExcelWorklist = mohawk.loadExcelWorklist(excelWorklist);
+			System.out.println("Load excel worklist result: " + loadExcelWorklist);
+		} catch (Exception e) {
+			System.out.println("Load excel worklist result: " + e.getMessage());
+		}
+		
+		
+		//Finish worklist
+		try {
+			String finishWorklistResult = mohawk.finishWorklist();
+			System.out.println("Finish worklist result: " + finishWorklistResult);
+		} catch (Exception e) {
+			System.out.println("Finish worklist result: " + e.getMessage());
+		}
+
+		
+		//Load xml file
+		try {
+			File xmlWorklist = new File("C:\\Users\\AndreeaStefanescu\\Desktop\\picklist.xml");
+			String loadXmlWorklist = mohawk.loadXMLWorklist(xmlWorklist);
+			System.out.println("Load xml worklist result: " + loadXmlWorklist);
+		} catch (Exception e) {
+			System.out.println("Load xml worklist result: " + e.getMessage());
+		}
+		
+		
+		//Finish worklist
+		try {
+			String finishWorklistResult = mohawk.finishWorklist();
+			System.out.println("Finish worklist result: " + finishWorklistResult);
+		} catch (Exception e) {
+			System.out.println("Finish worklist result: " + e.getMessage());
+		}
+
+		
+		//Load csv file
+		try {
+			File csvWorklist = new File("C:\\Users\\AndreeaStefanescu\\Desktop\\picklist.csv");
+			String loadCsvWorklist = mohawk.loadCSVWorklist(csvWorklist);
+			System.out.println("Load xml worklist result: " + loadCsvWorklist);
+		} catch (Exception e) {
+			System.out.println("Load xml worklist result: " + e.getMessage());
+		}
+		
+		
 		//Shutdown
 		try {
 			String shutdownResult = mohawk.shutdown();
@@ -203,17 +283,6 @@ public class MohawkWebserverTest
 		//Force shutdown
 		mohawk.forceShutdown();
 		System.out.println("Forced shutdown!");
-		
-		
-		//Load excel file
-//		try {
-//			File excelWorklist = new File("C:\\Users\\AndreeaStefanescu\\Desktop\\picklist.xlsx");
-//			String loadExcelWorklist = mohawk.loadExcelWorklist(excelWorklist);
-//			System.out.println("Load excel worklist result: " + loadExcelWorklist);
-//		} catch (Exception e) {
-//			e.printStackTrace();
-//			System.out.println("Load excel worklist result: " + e.getMessage());
-//		}
 		
 		
 		//call close session to close the notification client, either at the end of the operations or after some time

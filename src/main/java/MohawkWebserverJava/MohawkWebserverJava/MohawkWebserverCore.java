@@ -1,31 +1,26 @@
 package MohawkWebserverJava.MohawkWebserverJava;
 
+import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.StringReader;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpRequest.BodyPublishers;
-import java.net.http.HttpRequest.Builder;
-import java.net.http.HttpResponse;
-import java.net.http.HttpResponse.BodyHandlers;
-import java.nio.file.Files;
-import java.nio.file.OpenOption;
-import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
-import java.time.Duration;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+import org.apache.http.HttpEntity;
+import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.FileEntity;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import jakarta.json.Json;
@@ -35,7 +30,6 @@ import jakarta.json.JsonObject;
 public class MohawkWebserverCore {
 	private String host;
 	private int port;
-	private HttpClient httpClient;
 	private final String REMOTE_STUB = "/mohawk/api/v1";
 	private final String EXCEL_MEDIA_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
@@ -44,193 +38,128 @@ public class MohawkWebserverCore {
 		this.port = port;
 	}
 	
-	public void setHost(String host) {
-		this.host = host;
-	}
-
-	public void setPort(int port) {
-		this.port = port;
-	}
-
-	public HttpClient getHttpClient() {
-		return this.httpClient;
-	}
-
-	public void setHttpClient(HttpClient httpClient) {
-		this.httpClient = httpClient;
-	}
-	
 	private String urlStub() {
 		return String.format("http://%s:%s" + REMOTE_STUB, host, port);
 	}
 	
-	private String getParameterAppend(Map<String,String> parameters) {
-		String appendQuery ="";
-
-		for (Map.Entry<String, String> entry : parameters.entrySet()) {
-			appendQuery = appendQuery + entry.getKey() +"=" + entry.getValue() +"&";
-		}
-		return appendQuery;
-	}
-	
-	private String stringResponseToString(HttpResponse<String> response) {
-		JsonObject rdr = Json.createReader(new StringReader(response.body())).readObject();
-		return rdr.getString("result");
-	}
-	
-	private String stringResponseToString(String key, HttpResponse<String> response) {
-		JsonObject rdr = Json.createReader(new StringReader(response.body())).readObject();
+	private String getStringFieldFromResponse(String key, String response) {
+		JsonObject rdr = Json.createReader(new StringReader(response)).readObject();
 		return rdr.getString(key);
 	}
 	
-	private int numberResponseToString(HttpResponse<String> response) {
-		JsonObject rdr = Json.createReader(new StringReader(response.body())).readObject();
+	private String getStringResultFromResponse(String response) {
+		JsonObject rdr = Json.createReader(new StringReader(response)).readObject();
+		return rdr.getString("result");
+	}
+	
+	private int getNumberResultFromResponse(String response) {
+		JsonObject rdr = Json.createReader(new StringReader(response)).readObject();
 		return rdr.getInt("result");
 	}
-
-	private String getErrorMessage(HttpResponse<String> response) {
-		JsonObject reader = Json.createReader(new StringReader(response.body())).readObject();
-		return reader.getString("message");
-	}
 	
-	/**
-	 * Sending a GET request
-	 * @param action
-	 * @param parameters
-	 * @return
-	 * @throws URISyntaxException
-	 */
-	private HttpRequest getGetParamRequest(String action, Map<String,String> parameters) throws URISyntaxException {
-		HttpRequest request;
-		URI uri = URI.create(urlStub() + action);
-
-		if(parameters != null) {
-			String queryParam = getParameterAppend(parameters);
-			uri= new URI(uri.getScheme(), uri.getAuthority(),
-					uri.getPath(), queryParam, uri.getFragment());
-
-		}
-
-		request = HttpRequest.newBuilder().uri(uri)
-				.GET().build();		
+	public String getResponseContent(CloseableHttpResponse response) throws UnsupportedOperationException, IOException {
+		InputStream responseContent = response.getEntity().getContent();
+		String message = new BufferedReader(new InputStreamReader(responseContent))
+				   .lines().collect(Collectors.joining("\n"));
 		
-		return request;
+		return message;
 	}
 	
-	/**
-	 * Sending a POST request
-	 * @param action
-	 * @param parameters
-	 * @return
-	 * @throws URISyntaxException
-	 * @throws JsonProcessingException 
-	 */
-	private HttpRequest getPostParamRequest(String action, Object parameters) throws URISyntaxException, JsonProcessingException {
-		URI uri = URI.create(urlStub() + action);
-		Builder request = HttpRequest.newBuilder().uri(uri)
-				.setHeader("content-type", "application/json");
-		
-		ObjectMapper objectMapper = new ObjectMapper();
-        String requestBody = objectMapper
-                .writeValueAsString(parameters);
-                
-        if (parameters == null) {
-        	request = request.POST(BodyPublishers.ofString("{}"));
-        } else {
-        	request = request.POST(BodyPublishers.ofString(requestBody));
-        }	
-		
-		return request.build();
+	public CloseableHttpResponse executePost(String endpoint, String contentType, HttpEntity entity) throws ClientProtocolException, IOException {
+	    CloseableHttpClient client = HttpClients.createDefault();
+	    HttpPost httpPost = new HttpPost(urlStub() + endpoint);
+	    if (entity != null) {
+		    httpPost.setEntity(entity);
+		    httpPost.setHeader("content-type", contentType);
+	    }
+	    
+		CloseableHttpResponse response = client.execute(httpPost);
+		client.close();
+		return response;
 	}
 	
-	/**
-	 * Sending a POST request
-	 * @param action
-	 * @param parameters
-	 * @return
-	 * @throws URISyntaxException
-	 * @throws IOException 
-	 */
-	private HttpRequest getPostBinaryParamRequest(String action, File file, String contentType) throws URISyntaxException, IOException {
-		URI uri = URI.create(urlStub() + action);
-		System.out.println(file.toPath());
-		HttpRequest request = HttpRequest.newBuilder().uri(uri)
-				.setHeader("content-type", contentType)
-				.POST(BodyPublishers.ofByteArray(Files.readAllBytes(file.toPath())))
-				.timeout(Duration.ofMinutes(10))
-				.build();
-		
-		return request;
+	public CloseableHttpResponse executeGet(String endpoint) throws ClientProtocolException, IOException {
+	    CloseableHttpClient client = HttpClients.createDefault();
+	    HttpGet httpGet = new HttpGet(urlStub() + endpoint);
+	    
+		CloseableHttpResponse response = client.execute(httpGet);
+		client.close();
+		return response;
 	}
 	
-	public String getVersion() {
-		HttpResponse<String> response = null;
+	public String getVersion() throws Exception {
+		CloseableHttpResponse response = null;
+		String content = "";
 		try {
-			response = this.getHttpClient().send(getGetParamRequest("/version", null),
-					BodyHandlers.ofString());
-		} catch (IOException | URISyntaxException | InterruptedException e) {
+			response = executeGet("/version");
+			content = getResponseContent(response);
+		} catch (IOException e) {
 			//catch exception with some logs
 		}
-		if (response.statusCode() != 200) {
-			//catch the error of incorrect output
+		if (response.getStatusLine().getStatusCode() != 200) {
+			throw new Exception(getStringFieldFromResponse("message", content));
 		}
-		return stringResponseToString(response);
+		return getStringResultFromResponse(content);
 	}
 	
-	public String getLidStatus() {
-		HttpResponse<String> response = null;
+	public String getLidStatus() throws Exception {
+		CloseableHttpResponse response = null;
+		String content = "";
 		try {
-			response = this.getHttpClient().send(getGetParamRequest("/lid_status", null),
-					BodyHandlers.ofString());
-		} catch (IOException | URISyntaxException | InterruptedException e) {
+			response = executeGet("/lid_status");
+			content = getResponseContent(response);
+		} catch (IOException e) {
 			//catch exception with some logs
 		}
-		if (response.statusCode() != 200) {
-			//catch the error of incorrect output
+		if (response.getStatusLine().getStatusCode() != 200) {
+			throw new Exception(getStringFieldFromResponse("message", content));
 		}
-		return stringResponseToString(response);
+		return getStringResultFromResponse(content);
 	}
 	
-	public String getMohawkStatus() {
-		HttpResponse<String> response = null;
+	public String getMohawkStatus() throws Exception {
+		CloseableHttpResponse response = null;
+		String content = "";
 		try {
-			response = this.getHttpClient().send(getGetParamRequest("/mohawk_status", null),
-					BodyHandlers.ofString());
-		} catch (IOException | URISyntaxException | InterruptedException e) {
+			response = executeGet("/mohawk_status");
+			content = getResponseContent(response);
+		} catch (IOException e) {
 			//catch exception with some logs
 		}
-		if (response.statusCode() != 200) {
-			//catch the error of incorrect output
+		if (response.getStatusLine().getStatusCode() != 200) {
+			throw new Exception(getStringFieldFromResponse("message", content));
 		}
-		return stringResponseToString(response);
+		return getStringResultFromResponse(content);
 	}
 	
-	public int getFanSpeed() {
-		HttpResponse<String> response = null;
+	public int getFanSpeed() throws Exception {
+		CloseableHttpResponse response = null;
+		String content = "";
 		try {
-			response = this.getHttpClient().send(getGetParamRequest("/fan_speed", null),
-					BodyHandlers.ofString());
-		} catch (IOException | URISyntaxException | InterruptedException e) {
+			response = executeGet("/fan_speed");
+			content = getResponseContent(response);
+		} catch (IOException e) {
 			//catch exception with some logs
 		}
-		if (response.statusCode() != 200) {
-			//catch the error of incorrect output
+		if (response.getStatusLine().getStatusCode() != 200) {
+			throw new Exception(getStringFieldFromResponse("message", content));
 		}
-		return numberResponseToString(response);
+		return getNumberResultFromResponse(content);
 	}
 	
-	public int getTemperature() {
-		HttpResponse<String> response = null;
+	public int getTemperature() throws Exception {
+		CloseableHttpResponse response = null;
+		String content = "";
 		try {
-			response = this.getHttpClient().send(getGetParamRequest("/temperature", null),
-					BodyHandlers.ofString());
-		} catch (IOException | URISyntaxException | InterruptedException e) {
+			response = executeGet("/temperature");
+			content = getResponseContent(response);
+		} catch (IOException e) {
 			//catch exception with some logs
 		}
-		if (response.statusCode() != 200) {
-			//catch the error of incorrect output
+		if (response.getStatusLine().getStatusCode() != 200) {
+			throw new Exception(getStringFieldFromResponse("message", content));
 		}
-		return numberResponseToString(response);
+		return getNumberResultFromResponse(content);
 	}
 	
 	/**
@@ -238,297 +167,336 @@ public class MohawkWebserverCore {
 	 * @return
 	 */
 	public JsonArray getPinsStatus() {
-		HttpResponse<String> response = null;
+		CloseableHttpResponse response = null;
+		String content = "";
 		try {
-			response = this.getHttpClient().send(getGetParamRequest("/pins_status", null),
-					BodyHandlers.ofString());
-		} catch (IOException | URISyntaxException | InterruptedException e) {
+			response = executeGet("/pins_status");
+			content = getResponseContent(response);
+		} catch (IOException e) {
 			//catch exception with some logs
 		}
-		if (response.statusCode() != 200) {
+		if (response.getStatusLine().getStatusCode() != 200) {
 			//catch the error of incorrect output
 		}
-		return Json.createReader(new StringReader(response.body())).readArray();
+		return Json.createReader(new StringReader(content)).readArray();
 	}
 	
 	public int getFormat() {
-		HttpResponse<String> response = null;
+		CloseableHttpResponse response = null;
+		String content = "";
 		try {
-			response = this.getHttpClient().send(getGetParamRequest("/format", null),
-					BodyHandlers.ofString());
-		} catch (IOException | URISyntaxException | InterruptedException e) {
+			response = executeGet("/format");
+			content = getResponseContent(response);
+		} catch (IOException e) {
 			//catch exception with some logs
 		}
-		if (response.statusCode() != 200) {
+		if (response.getStatusLine().getStatusCode() != 200) {
 			//catch the error of incorrect output
 		}
-		return numberResponseToString(response);
+		return getNumberResultFromResponse(content);
 	}
 	
 	public String getWorklistStatus() throws Exception {
-		HttpResponse<String> response = null;
+		CloseableHttpResponse response = null;
+		String content = "";
 		try {
-			response = this.getHttpClient().send(getGetParamRequest("/worklist/status", null),
-					BodyHandlers.ofString());
-		} catch (IOException | URISyntaxException | InterruptedException e) {
+			response = executeGet("/worklist/status");
+			content = getResponseContent(response);
+		} catch (IOException e) {
 			//catch exception with some logs
 		}
-		if (response.statusCode() != 200) {
-			throw new Exception(getErrorMessage(response));
+		if (response.getStatusLine().getStatusCode() != 200) {
+			//catch the error of incorrect output
 		}
-		return stringResponseToString(response);
+		return getStringResultFromResponse(content);
 	}
 	
 
 	public JsonObject getWorklistProgress() throws Exception {
-		HttpResponse<String> response = null;
-		
+		CloseableHttpResponse response = null;
+		String content = "";
 		try {
-			response = this.getHttpClient().send(getGetParamRequest("/worklist", null),
-					BodyHandlers.ofString());
-		} catch (IOException | URISyntaxException | InterruptedException e) {
+			response = executeGet("/worklist");
+			content = getResponseContent(response);
+		} catch (IOException e) {
 			//catch exception with some logs
 		}
-		if (response.statusCode() != 200) {
-			throw new Exception(getErrorMessage(response));
+		if (response.getStatusLine().getStatusCode() != 200) {
+			throw new Exception(getStringFieldFromResponse("message", content));
 		}
-		return Json.createReader(new StringReader(response.body())).readObject();
+		
+		return Json.createReader(new StringReader(content)).readObject();
 	}
 	
-	public String resetPins() {
-		HttpResponse<String> response = null;
+	public String resetPins() throws Exception {
+		CloseableHttpResponse response = null;
+		String content = "";
 		try {
-			response = this.getHttpClient().send(getPostParamRequest("/reset_pins", null),
-					BodyHandlers.ofString());
-		} catch (IOException | URISyntaxException | InterruptedException e) {
+			response = executePost("/reset_pins", null, null);
+			content = getResponseContent(response);
+		} catch (IOException e) {
 			//catch exception with some logs
 		}
-		if (response.statusCode() != 200) {
-			//catch the error of incorrect output
+		if (response.getStatusLine().getStatusCode() != 200) {
+			throw new Exception(getStringFieldFromResponse("message", content));
 		}
-		return stringResponseToString(response);
+		return getStringResultFromResponse(content);
 	}
 	
 	public JsonArray pinsUp(List<Object> parameters) throws Exception {
-		HttpResponse<String> response = null;
+		CloseableHttpResponse response = null;
+		String content = "";
+		
 		try {
-			response = this.getHttpClient().send(getPostParamRequest("/pins_up", parameters),
-					BodyHandlers.ofString());
-		} catch (IOException | URISyntaxException | InterruptedException e) {
+			String serializedParameters = new ObjectMapper().writeValueAsString(parameters);
+			
+			response = executePost("/pins_up", "application/json", new StringEntity(serializedParameters));
+			content = getResponseContent(response);
+		} catch (IOException e) {
 			//catch exception with some logs
 		}
-		if (response.statusCode() != 200) {
-			throw new Exception(getErrorMessage(response));
+		if (response.getStatusLine().getStatusCode() != 200) {
+			throw new Exception(getStringFieldFromResponse("message", content));
 		}
-		return Json.createReader(new StringReader(response.body())).readArray();
+		System.out.println("Pins up result : " + content);
+		return Json.createReader(new StringReader(content)).readArray();
 	}
 	
 	//to do: configure reader for type null
-	public JsonObject configureReader(String type) {
-		HttpResponse<String> response = null;
+	public JsonObject configureReader(String type) throws Exception {
+		CloseableHttpResponse response = null;
+		String content = "";
 		
 		Map<String, String> param = new HashMap<>();
 		param.put("type", type);
 		
 		try {
-			response = this.getHttpClient().send(getPostParamRequest("/reader", param),
-					BodyHandlers.ofString());
-		} catch (IOException | URISyntaxException | InterruptedException e) {
+			String serializedParam = new ObjectMapper().writeValueAsString(param);
+			
+			response = executePost("/reset_pins", "application/json", new StringEntity(serializedParam));
+			content = getResponseContent(response);
+		} catch (IOException e) {
 			//catch exception with some logs
 		}
-		if (response.statusCode() != 200) {
-			//catch the error of incorrect output
+		if (response.getStatusLine().getStatusCode() != 200) {
+			throw new Exception(getStringFieldFromResponse("message", content));
 		}
-		return Json.createReader(new StringReader(response.body())).readObject();
+		return Json.createReader(new StringReader(content)).readObject();
 	}
 
-	public String readBarcode() {
-		HttpResponse<String> response = null;
+	public String readBarcode() throws Exception {
+		CloseableHttpResponse response = null;
+		String content = "";
 		try {
-			response = this.getHttpClient().send(getPostParamRequest("/read_barcode", null),
-					BodyHandlers.ofString());
-		} catch (IOException | URISyntaxException | InterruptedException e) {
+			response = executePost("/read_barcode", null, null);
+			content = getResponseContent(response);
+		} catch (IOException e) {
 			//catch exception with some logs
 		}
-		if (response.statusCode() != 200) {
-			//catch the error of incorrect output
+		if (response.getStatusLine().getStatusCode() != 200) {
+			throw new Exception(getStringFieldFromResponse("message", content));
 		}
-		return stringResponseToString(response);
+		return getStringResultFromResponse(content);
 	}
 	
 	public String loadRack(Map<String, Object> params) throws Exception {
-		HttpResponse<String> response = null;
+		CloseableHttpResponse response = null;
+		String content = "";
 		try {
-			response = this.getHttpClient().send(getPostParamRequest("/set_rack_barcode", params),
-					BodyHandlers.ofString());
-		} catch (IOException | URISyntaxException | InterruptedException e) {
+			String serializedParams = new ObjectMapper().writeValueAsString(params);
+			
+			response = executePost("/set_rack_barcode", "application/json", new StringEntity(serializedParams));
+			content = getResponseContent(response);
+		} catch (IOException e) {
 			//catch exception with some logs
 		}
-		if (response.statusCode() != 200) {
-			throw new Exception(getErrorMessage(response));
+		if (response.getStatusLine().getStatusCode() != 200) {
+			throw new Exception(getStringFieldFromResponse("message", content));
 		}
-		return stringResponseToString(response);
+		return getStringResultFromResponse(content);
 	}
 	
 	public String loadWorklist(List<Object> parameters) throws Exception {
-		HttpResponse<String> response = null;
+		CloseableHttpResponse response = null;
+		String content = "";
 		try {
-			response = this.getHttpClient().send(getPostParamRequest("/worklist/load_json", parameters),
-					BodyHandlers.ofString());
-		} catch (IOException | URISyntaxException | InterruptedException e) {
+			String serializedParams = new ObjectMapper().writeValueAsString(parameters);
+			
+			response = executePost("/worklist/load_json", "application/json", new StringEntity(serializedParams));
+			content = getResponseContent(response);
+		} catch (IOException e) {
 			//catch exception with some logs
 		}
-		if (response.statusCode() != 200) {
-			throw new Exception(getErrorMessage(response));
+		if (response.getStatusLine().getStatusCode() != 200) {
+			throw new Exception(getStringFieldFromResponse("message", content));
 		}
-		return stringResponseToString(response);
+		
+
+		System.out.println("Load worklist result : " + content);
+		return getStringResultFromResponse(content);
 	}
 	
 	public String finishWorklist() throws Exception {
-		HttpResponse<String> response = null;
+		CloseableHttpResponse response = null;
+		String content = "";
 		try {
-			response = this.getHttpClient().send(getPostParamRequest("/worklist/finish", null),
-					BodyHandlers.ofString());
-		} catch (IOException | URISyntaxException | InterruptedException e) {
+			response = executePost("/worklist/finish", null, null);
+			content = getResponseContent(response);
+		} catch (IOException e) {
 			//catch exception with some logs
 		}
-		if (response.statusCode() != 200) {
-			throw new Exception(getErrorMessage(response));
+		if (response.getStatusLine().getStatusCode() != 200) {
+			throw new Exception(getStringFieldFromResponse("message", content));
 		}
-		return stringResponseToString(response);
+		return getStringResultFromResponse(content);
 	}
 	
-	//to do: make this work
 	public String loadExcelWorklist(File worklist) throws Exception {
-		HttpResponse<String> response = null;
+		CloseableHttpResponse response = null;
+		String content = "";
 		try {
-			response = this.getHttpClient().send(getPostBinaryParamRequest("/worklist/load_excel", worklist, EXCEL_MEDIA_TYPE),
-					BodyHandlers.ofString());
-		} catch (IOException | URISyntaxException | InterruptedException e) {
+			response = executePost("/worklist/load_excel", EXCEL_MEDIA_TYPE, new FileEntity(worklist));
+			content = getResponseContent(response);
+		} catch (IOException e) {
 			//catch exception with some logs
 		}
-		if (response.statusCode() != 200) {
-			printResponse(response);
-			throw new Exception(getErrorMessage(response));
+		if (response.getStatusLine().getStatusCode() != 200) {
+			throw new Exception(getStringFieldFromResponse("message", content));
 		}
-		return stringResponseToString(response);
+		return getStringResultFromResponse(content);
 	}
 	
-	private void printResponse(HttpResponse<String> response) {
-		System.out.println("Received response: ");
-		System.out.println("request and status: " + response.toString());
-		System.out.println("body: " + response.body());
-	}
-
-	//to do: make this work
 	public String loadXMLWorklist(File worklist) throws Exception {
-		HttpResponse<String> response = null;
+		CloseableHttpResponse response = null;
+		String content = "";
 		try {
-			response = this.getHttpClient().send(getPostBinaryParamRequest("/worklist/load_xml", worklist, "application/xml"),
-					BodyHandlers.ofString());
-		} catch (IOException | URISyntaxException | InterruptedException e) {
+			response = executePost("/worklist/load_xml", "application/xml", new FileEntity(worklist));
+			content = getResponseContent(response);
+		} catch (IOException e) {
 			//catch exception with some logs
 		}
-		if (response.statusCode() != 200) {
-			throw new Exception(getErrorMessage(response));
+		if (response.getStatusLine().getStatusCode() != 200) {
+			throw new Exception(getStringFieldFromResponse("message", content));
 		}
-		return stringResponseToString(response);
+		return getStringResultFromResponse(content);
 	}
 	
-	//to do: make this work
 	public String loadCSVWorklist(File worklist) throws Exception {
-		HttpResponse<String> response = null;
+		CloseableHttpResponse response = null;
+		String content = "";
 		try {
-			response = this.getHttpClient().send(getPostBinaryParamRequest("/worklist/load_csv", worklist, "text/csv"),
-					BodyHandlers.ofString());
-		} catch (IOException | URISyntaxException | InterruptedException e) {
+			response = executePost("/worklist/load_csv", "text/csv", new FileEntity(worklist));
+			content = getResponseContent(response);
+		} catch (IOException e) {
 			//catch exception with some logs
 		}
-		if (response.statusCode() != 200) {
-			throw new Exception(getErrorMessage(response));
+		if (response.getStatusLine().getStatusCode() != 200) {
+			throw new Exception(getStringFieldFromResponse("message", content));
 		}
-		return stringResponseToString(response);
+		return getStringResultFromResponse(content);
 	}
 	
 	public JsonObject reportToJson() throws Exception {
-		HttpResponse<String> response = null;
+		CloseableHttpResponse response = null;
+		String content = "";
 		try {
-			response = this.getHttpClient().send(getGetParamRequest("/report_to_json", null),
-					BodyHandlers.ofString());
-		} catch (IOException | URISyntaxException | InterruptedException e) {
+			response = executeGet("/report_to_json");
+			content = getResponseContent(response);
+		} catch (IOException e) {
 			//catch exception with some logs
 		}
-		if (response.statusCode() != 200) {
-			throw new Exception(getErrorMessage(response));
+		if (response.getStatusLine().getStatusCode() != 200) {
+			throw new Exception(getStringFieldFromResponse("message", content));
 		}
-		return Json.createReader(new StringReader(response.body())).readObject();
+		
+		return Json.createReader(new StringReader(content)).readObject();
 	}
 	
 	public File reportToXML() throws Exception {
-		HttpResponse<Path> response = null;
+		CloseableHttpResponse response = null;
+		File report = new File("report.xml");
 		try {
-			response = this.getHttpClient().send(getGetParamRequest("/report_to_xml", null),
-					BodyHandlers.ofFile(Path.of("report.xml")));
-		} catch (IOException | URISyntaxException | InterruptedException e) {
+			response = executeGet("/report_to_xml");
+			
+			HttpEntity entity = response.getEntity();
+		    if (entity != null) {
+		        try (FileOutputStream outstream = new FileOutputStream(report)) {
+		            entity.writeTo(outstream);
+		        }
+		    }
+		} catch (IOException e) {
 			//catch exception with some logs
 		}
-		if (response.statusCode() != 200) {
-			//catch the error of incorrect output
+		if (response.getStatusLine().getStatusCode() != 200) {
+			throw new Exception(getStringFieldFromResponse("message", getResponseContent(response)));
 		}
 		
-		return response.body().toFile();
+		return report;
 	}
 	
 	public File reportToExcel() throws Exception {
-		HttpResponse<Path> response = null;
+		CloseableHttpResponse response = null;
+		File report = new File("report.xlsx");
 		try {
-			response = this.getHttpClient().send(getGetParamRequest("/report_to_excel", null),
-					BodyHandlers.ofFile(Path.of("report.xlsx")));
-		} catch (IOException | URISyntaxException | InterruptedException e) {
+			response = executeGet("/report_to_excel");
+			
+			HttpEntity entity = response.getEntity();
+		    if (entity != null) {
+		        try (FileOutputStream outstream = new FileOutputStream(report)) {
+		            entity.writeTo(outstream);
+		        }
+		    }
+		} catch (IOException e) {
 			//catch exception with some logs
 		}
-		if (response.statusCode() != 200) {
-			//catch the error of incorrect output
+		if (response.getStatusLine().getStatusCode() != 200) {
+			throw new Exception(getStringFieldFromResponse("message", getResponseContent(response)));
 		}
 		
-		return response.body().toFile();
+		return report;
 	}
 	
 	public File reportToCSV() throws Exception {
-		HttpResponse<Path> response = null;
+		CloseableHttpResponse response = null;
+		File report = new File("report.csv");
 		try {
-			response = this.getHttpClient().send(getGetParamRequest("/report_to_csv", null),
-					BodyHandlers.ofFile(Path.of("report.csv")));
-		} catch (IOException | URISyntaxException | InterruptedException e) {
+			response = executeGet("/report_to_csv");
+			
+			HttpEntity entity = response.getEntity();
+		    if (entity != null) {
+		        try (FileOutputStream outstream = new FileOutputStream(report)) {
+		            entity.writeTo(outstream);
+		        }
+		    }
+		} catch (IOException e) {
 			//catch exception with some logs
 		}
-		if (response.statusCode() != 200) {
-			//catch the error of incorrect output
+		if (response.getStatusLine().getStatusCode() != 200) {
+			throw new Exception(getStringFieldFromResponse("message", getResponseContent(response)));
 		}
-	
-		return response.body().toFile();
+		
+		return report;
 	}
 	
 	public String shutdown() throws Exception {
-		HttpResponse<String> response = null;
+		CloseableHttpResponse response = null;
+		String content = "";
 		try {
-			response = this.getHttpClient().send(getPostParamRequest("/shutdown", null),
-					BodyHandlers.ofString());
-		} catch (IOException | URISyntaxException | InterruptedException e) {
+			response = executePost("/shutdown", null, null);
+			content = getResponseContent(response);
+		} catch (IOException e) {
 			//catch exception with some logs
 		}
-		if (response.statusCode() != 200) {
-			throw new Exception(getErrorMessage(response));
+		if (response.getStatusLine().getStatusCode() != 200) {
+			throw new Exception(getStringFieldFromResponse("message", content));
 		}
-		return stringResponseToString(response);
+		return getStringResultFromResponse(content);
 	}
 	
 	public void forceShutdown() {
-		HttpResponse<String> response = null;
 		try {
-			response = this.getHttpClient().send(getPostParamRequest("/force_shutdown", null),
-					BodyHandlers.ofString());
-		} catch (IOException | URISyntaxException | InterruptedException e) {
+			executePost("/force_shutdown", null, null);
+		} catch (IOException e) {
 			//catch exception with some logs
 		}
 	}
