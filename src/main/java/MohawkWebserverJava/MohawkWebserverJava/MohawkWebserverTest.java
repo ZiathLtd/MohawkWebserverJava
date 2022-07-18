@@ -79,13 +79,23 @@ public class MohawkWebserverTest
         
         
         //Get pins status
-        JsonArray pinsStatus = mohawk.getPinsStatus();
-        System.out.println("Pins status: " + pinsStatus);
+        JsonArray pinsStatus;
+		try {
+			pinsStatus = mohawk.getPinsStatus();
+	        System.out.println("Pins status: " + pinsStatus);
+		} catch (Exception e) {
+	        System.out.println("Pins status: " + e.getMessage());
+		}
         
         
         //Get format
-        int format = mohawk.getFormat();
-        System.out.println("Format: " + format);
+        int format;
+		try {
+			format = mohawk.getFormat();
+	        System.out.println("Format: " + format);
+		} catch (Exception e) {
+	        System.out.println("Format: " + e.getMessage());
+		}
         
         
         //Reset pins
@@ -302,6 +312,7 @@ public class MohawkWebserverTest
     /**
      * Use this to start the notification client on a new thread
      * and keep it running until the program is terminated
+     * 
      * @throws InterruptedException 
      */
     public static void startNotificationClientAndKeepAlive() throws InterruptedException {
