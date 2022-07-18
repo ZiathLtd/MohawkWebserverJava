@@ -2,4 +2,24 @@
 
 This is the java example for the Mohawk REST API.
 
-Make sure the Mohawk REST API server is running. After that, simply run the MohawkWebserverTest.java class.
+###  To start the Mohawk webserver:
+
+1. Open the command line and navigate to the directory which contains the Mohawk webserver application. Example:
+```
+cd C:\Program Files\Ziath\Mohawk\
+```
+
+2. Run the MohawkWebserver application by writing the following in the command line:
+```
+MohawkWebserver.exe
+```
+
+If you wish to start MohawkWebserver in the simulation mode, run in the command line:
+```
+MohawkWebserver.exe -ss
+```
+
+###  To start the Mohawk webserver client:
+```
+MohawkWebserverExample.exe
+```
