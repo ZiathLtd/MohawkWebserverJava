@@ -258,7 +258,7 @@ public class MohawkWebserverCore {
 		if (response.getStatusLine().getStatusCode() != 200) {
 			throw new Exception(getStringFieldFromResponse("message", content));
 		}
-		System.out.println("Pins up result : " + content);
+
 		return Json.createReader(new StringReader(content)).readArray();
 	}
 	
@@ -267,17 +267,22 @@ public class MohawkWebserverCore {
 		CloseableHttpResponse response = null;
 		String content = "";
 		
-		Map<String, String> param = new HashMap<>();
-		param.put("type", type);
+		String serializedParam;
+		if (type == null) {
+			serializedParam = new ObjectMapper().writeValueAsString(JsonObject.EMPTY_JSON_OBJECT);
+		} else {
+			Map<String, String> param = new HashMap<>();
+			param.put("type", type);
+			serializedParam = new ObjectMapper().writeValueAsString(param);
+		}
 		
 		try {
-			String serializedParam = new ObjectMapper().writeValueAsString(param);
-			
-			response = executePost("/reset_pins", "application/json", new StringEntity(serializedParam));
+			response = executePost("/reader", "application/json", new StringEntity(serializedParam));
 			content = getResponseContent(response);
 		} catch (IOException e) {
 			//catch exception with some logs
 		}
+		System.out.println(content);
 		if (response.getStatusLine().getStatusCode() != 200) {
 			throw new Exception(getStringFieldFromResponse("message", content));
 		}
@@ -331,8 +336,6 @@ public class MohawkWebserverCore {
 			throw new Exception(getStringFieldFromResponse("message", content));
 		}
 		
-
-		System.out.println("Load worklist result : " + content);
 		return getStringResultFromResponse(content);
 	}
 	

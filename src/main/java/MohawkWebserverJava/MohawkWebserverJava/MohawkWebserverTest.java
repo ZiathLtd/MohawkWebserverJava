@@ -110,26 +110,6 @@ public class MohawkWebserverTest
 	        System.out.println("Pins up result: " + e.getMessage());
 		}
 		
-		
-		//Configure reader
-		JsonObject reader;
-		try {
-			reader = mohawk.configureReader("ZIATH");
-			System.out.println("Configure reader result: " + reader);
-		} catch (Exception e) {
-			System.out.println("Configure reader result: " + e.getMessage());
-		}
-		
-
-		//Read rack barcode
-		String barcode;
-		try {
-			barcode = mohawk.readBarcode();
-			System.out.println("Rack barode: " + barcode);
-		} catch (Exception e) {
-			System.out.println("Rack barode: " + e.getMessage());
-		}
-		
 
         //Load json worklist
         List<Object> worklist = new ArrayList<>();
@@ -148,7 +128,7 @@ public class MohawkWebserverTest
 		
         //Load rack
         Map<String, Object> params = new HashMap<>();
-        params.put("rack_barcode", "002");
+        params.put("rack_barcode", "LVL100074983");
         params.put("reset_pins", "true");
         String loadRackResult = null;
 		try {
@@ -157,6 +137,27 @@ public class MohawkWebserverTest
 		} catch (Exception e) {
 	        System.out.println("Load rack result: " + e.getMessage());
 		}
+		
+		
+		//Configure reader
+		JsonObject reader;
+		try {
+			reader = mohawk.configureReader(null);
+			System.out.println("Configure reader result: " + reader);
+		} catch (Exception e) {
+			System.out.println("Configure reader result: " + e.getMessage());
+		}
+		
+
+		//Read rack barcode
+		String barcode;
+		try {
+			barcode = mohawk.readBarcode();
+			System.out.println("Rack barode: " + barcode);
+		} catch (Exception e) {
+			System.out.println("Rack barode: " + e.getMessage());
+		}
+		
 
 		//Worklist progress
 		JsonObject worklistProgress;
