@@ -198,6 +198,34 @@ public class MohawkWebserverTest
 		}
 		
 		
+        //Load json worklist
+		try {
+			loadJsonWorklistResult = mohawk.loadWorklist(worklist);
+	        System.out.println("Load worklist result: " + loadJsonWorklistResult);
+		} catch (Exception e) {
+	        System.out.println("Load worklist result: " + e.getMessage());
+		}
+
+		
+		//Cancel worklist
+		try {
+			String cancelWorklistResult = mohawk.cancelWorklist();
+			System.out.println("Cancel worklist result: " + cancelWorklistResult);
+		} catch (Exception e) {
+			System.out.println("Cancel worklist result: " + e.getMessage());
+		}
+		
+
+		
+        //Load json worklist
+		try {
+			loadJsonWorklistResult = mohawk.loadWorklist(worklist);
+	        System.out.println("Load worklist result: " + loadJsonWorklistResult);
+		} catch (Exception e) {
+	        System.out.println("Load worklist result: " + e.getMessage());
+		}
+		
+		
 		//Report to json
 		try {
 			JsonObject jsonReport = mohawk.reportToJson();
@@ -231,6 +259,15 @@ public class MohawkWebserverTest
 			System.out.println("CSV Report: " + csvReport.toPath());
 		} catch (Exception e) {
 			System.out.println("CSV Report: " + e.getMessage());
+		}
+		
+		
+		//Finish worklist
+		try {
+			String finishWorklistResult = mohawk.finishWorklist();
+			System.out.println("Finish worklist result: " + finishWorklistResult);
+		} catch (Exception e) {
+			System.out.println("Finish worklist result: " + e.getMessage());
 		}
 		
 		
@@ -276,9 +313,9 @@ public class MohawkWebserverTest
 		try {
 			File csvWorklist = new File("C:\\Users\\AndreeaStefanescu\\Desktop\\picklist.csv");
 			String loadCsvWorklist = mohawk.loadCSVWorklist(csvWorklist);
-			System.out.println("Load xml worklist result: " + loadCsvWorklist);
+			System.out.println("Load csv worklist result: " + loadCsvWorklist);
 		} catch (Exception e) {
-			System.out.println("Load xml worklist result: " + e.getMessage());
+			System.out.println("Load csv worklist result: " + e.getMessage());
 		}
 		
 		

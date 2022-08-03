@@ -350,7 +350,6 @@ public class MohawkWebserverCore {
 		} catch (IOException e) {
 			//catch exception with some logs
 		}
-		System.out.println(content);
 		if (response.getStatusLine().getStatusCode() != 200) {
 			throw new Exception(getErrorMessageFromResponse(content));
 		}
@@ -412,6 +411,21 @@ public class MohawkWebserverCore {
 		String content = "";
 		try {
 			response = executePost("/worklist/finish", null, null);
+			content = getResponseContent(response);
+		} catch (IOException e) {
+			//catch exception with some logs
+		}
+		if (response.getStatusLine().getStatusCode() != 200) {
+			throw new Exception(getErrorMessageFromResponse(content));
+		}
+		return getStringResultFromResponse(content);
+	}
+	
+	public String cancelWorklist() throws Exception {
+		CloseableHttpResponse response = null;
+		String content = "";
+		try {
+			response = executePost("/worklist/cancel", null, null);
 			content = getResponseContent(response);
 		} catch (IOException e) {
 			//catch exception with some logs
