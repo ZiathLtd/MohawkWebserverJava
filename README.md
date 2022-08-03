@@ -19,7 +19,4 @@ If you wish to start MohawkWebserver in the simulation mode, run in the command 
 MohawkWebserver.exe -ss
 ```
 
-###  To start the Mohawk webserver example:
-```
-MohawkWebserverExample.exe
-```
+###  To start the Mohawk webserver example run the MohawkWebserverTest class.
